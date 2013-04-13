@@ -62,14 +62,16 @@ module Resque
         begin
           yield
         ensure
-          Resque.redis.del(rlock)
-          Resque.redis.del(lock(*args))
+          unlock(*args)
         end
       end
 
       def after_dequeue_lock(*args)
-        Resque.redis.del(run_lock(*args))
-        Resque.redis.del(lock(*args))
+        unlock(*args)
+      end
+
+      def on_failure_lock(e, *args)
+        unlock(*args)
       end
 
       private
@@ -90,6 +92,11 @@ module Resque
         else
           obj.to_s
         end
+      end
+
+      def unlock(*args)
+        Resque.redis.del(run_lock(*args))
+        Resque.redis.del(lock(*args))
       end
     end
   end
